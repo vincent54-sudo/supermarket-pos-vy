@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimal POS - Bookstore</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script>
+        // Security Check
+        const token = localStorage.getItem("token");
+        if (!token) {
+            window.location.href = "login.html";
+        }
+    </script>
+    <style>
+        #interactive.viewport {
+            width: 100%;
+            height: 300px;
+            position: relative;
+            background: #000;
+            border: 2px solid #007bff;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        #interactive.viewport video, canvas {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        .container { display: flex; flex-direction: column; gap: 20px; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: #f4f4f4; padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .total-container { padding: 20px; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <h2>Scan Product with Camera</h2>
+            <div id="interactive" class="viewport"></div> 
+        </div>
+
+        <div class="card">
+            <h3>Manual Entry</h3>
+            <input type="text" id="itemId" placeholder="Product Code">
+            <input type="number" id="quantity" value="1" style="width: 50px;">
+            <button id="addBtn">Add to Cart</button>
+        </div>
+
+        <div class="card">
+            <h2>Cart</h2>
+            <table id="cartTable">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody id="cartTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="total-container">
+        <h2 id="grandTotal">Total: $0.00</h2>
+        <button id="checkoutBtn" style="background-color: green; color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1rem;">
+            Complete Sale & Print Receipt
+        </button>
+    </div>
+
+    <div id="receipt-print-area" style="display:none;">
+        <div style="text-align:center; font-family: monospace;">
+            <h1>MY BOOKSTORE</h1>
+            <p>Customer Receipt</p>
+            <p>Date: <span id="receiptDate"></span></p>
+            <hr>
+            <table style="width:100%; text-align: left;">
+                <thead>
+                    <tr><th>Item</th><th>Price</th></tr>
+                </thead>
+                <tbody id="receiptItems"></tbody>
+            </table>
+            <hr>
+            <h2 id="receiptTotal"></h2>
+            <p>Thank you for shopping!</p>
+        </div>
+    </div>
+
+    <script>
+        // --- VARIABLES ---
+        let totalSum = 0;
+        let isProcessing = false; 
+        let lastCode = "";
+        let count = 0;
+
+        // --- CAMERA INITIALIZATION ---
+        Quagga.init({
+            inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: document.querySelector('#interactive'),
+                constraints: { facingMode: "environment" }
+            },
+            decoder: {
+                readers: ["ean_reader", "upc_reader", "code_128_reader"]
+            }
+        }, function (err) {
+            if (err) { console.error("Camera error:", err); return; }
+            Quagga.start();
+        });
+
+        // --- CAMERA DETECTION LOGIC ---
+        Quagga.onDetected(async function (data) {
+            const code = data.codeResult.code;
+            if (code === lastCode) {
+                count++;
+            } else {
+                lastCode = code;
+                count = 0;
+            }
+
+            if (count === 5 && !isProcessing) {
+                isProcessing = true;
+                await fetchProductByBarcode(code);
+                setTimeout(() => { 
+                    isProcessing = false; 
+                    count = 0; 
+                    lastCode = ""; 
+                }, 3000);
+            }
+        });
+
+        // --- MANUAL ADD BUTTON ---
+        document.getElementById("addBtn").addEventListener("click", async () => {
+            const code = document.getElementById("itemId").value.trim();
+            if (code === "") {
+                alert("Please enter a code!");
+                return;
+            }
+            await fetchProductByBarcode(code);
+            document.getElementById("itemId").value = "";
+        });
+
+        // --- DATA FETCHING ---
+        async function fetchProductByBarcode(code) {
+            console.log("Searching for:", code);
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/barcode/${code}`);
+                if (response.ok) {
+                    const product = await response.json();
+                    addItemToCart(product);
+                } else {
+                    alert("Barcode " + code + " not found in database!");
+                }
+            } catch (err) {
+                console.error("Connection error:", err);
+            }
+        }
+
+        // --- UI UPDATING ---
+        function addItemToCart(product) {
+            const tbody = document.getElementById("cartTableBody");
+            const row = tbody.insertRow();
+            
+            row.innerHTML = `
+                <td>${product.name}</td>
+                <td>$${product.price.toFixed(2)}</td>
+                <td>1</td>
+            `;
+
+            updateGrandTotal(product.price);
+        }
+
+        function updateGrandTotal(price) {
+            totalSum += price;
+            document.getElementById("grandTotal").innerText = `Total: $${totalSum.toFixed(2)}`;
+        }
+
+        // --- CHECKOUT & PRINT RECEIPT ---
+        document.getElementById("checkoutBtn").addEventListener("click", () => {
+            const cartRows = document.querySelectorAll("#cartTableBody tr");
+            if (cartRows.length === 0) {
+                alert("Cart is empty!");
+                return;
+            }
+
+            const receiptItems = document.getElementById("receiptItems");
+            receiptItems.innerHTML = ""; // Clear old receipt
+            
+            // Move items to receipt
+            cartRows.forEach(row => {
+                const name = row.cells[0].innerText;
+                const price = row.cells[1].innerText;
+                const newRow = `<tr><td>${name}</td><td>${price}</td></tr>`;
+                receiptItems.innerHTML += newRow;
+            });
+
+            document.getElementById("receiptTotal").innerText = document.getElementById("grandTotal").innerText;
+            document.getElementById("receiptDate").innerText = new Date().toLocaleString();
+
+            // Printing Logic
+            const printContent = document.getElementById("receipt-print-area").innerHTML;
+            const originalBody = document.body.innerHTML;
+
+            document.body.innerHTML = printContent;
+            window.print();
+            
+            // Return to normal and clear cart
+            location.reload(); 
+
+            
+        });
+    </script>
+</body>
+</html>

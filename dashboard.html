@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard | SmartMarket</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./styles.css">
+    <script defer src="./style.js"></script>
+</head>
+<body>
+
+<header class="navbar">
+    <h1>Dashboard</h1>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="pos.html">POS</a>
+    </nav>
+</header>
+
+<main class="container">
+
+    <section class="card">
+        <h2>Inventory Overview</h2>
+        <div id="loadingSpinner" class="spinner"></div>
+        <table id="inventoryTable">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- JS will populate -->
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h2>AI Forecast Insights</h2>
+        <div id="forecastContainer">
+            <!-- JS will inject forecast results -->
+        </div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <p>&copy; 2026 SmartMarket</p>
+</footer>
+
+<script src="./dashboard.js"></script>
+
+<script type="module" src="./dashboard.js"></script>
+<div id="toast" class="toast"></div>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supermarket Enterprise - Admin</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        
+        /* Stats Cards */
+        .stats { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            flex: 1; 
+            min-width: 250px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card h3 { margin-top: 0; color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase; }
+        .card p { font-size: 1.8rem; font-weight: bold; margin: 10px 0 0 0; color: #2c3e50; }
+
+        /* Import Section */
+        .import-section {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .button-group { display: flex; gap: 10px; margin-top: 15px; }
+        
+        button { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.8; }
+        
+        .btn-sync { background: #28a745; color: white; }
+        .btn-refresh { background: #007bff; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+
+        /* Table Styles */
+        .table-container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; color: #495057; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        
+        code { background: #f1f1f1; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .low-stock-alert { color: #dc3545; font-weight: bold; list-style-type: none; padding-left: 0; }
+        .low-stock-alert li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>Admin Dashboard</h1>
+    
+    <div class="stats">
+        <div class="card">
+            <h3>Total Revenue</h3>
+            <p id="revenueText">$0.00</p>
+        </div>
+        <div class="card">
+            <h3>Low Stock Alerts</h3>
+            <ul id="lowStockList" class="low-stock-alert">
+                <li>Checking stock...</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="import-section">
+        <h3>🚀 Supermarket Inventory Sync</h3>
+        <p>Upload your CSV file (id, name, category, stock, price, barcode) to update your entire store.</p>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <input type="file" id="csvFile" accept=".csv">
+            <div class="button-group">
+                <button class="btn-sync" onclick="uploadCSV()">Sync CSV File</button>
+                <button class="btn-danger" onclick="clearInventory()">🗑️ Reset Inventory</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0;">Current Stock Details</h2>
+            <button class="btn-refresh" onclick="refreshDashboard()">🔄 Refresh Data</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>In Stock</th>
+                    <th>Barcode</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryBody">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+    const BASE_URL = "https://supermarket-pos-bh4k.onrender.com";
+
+    async function refreshDashboard() {
+        loadStats();
+        loadInventory();
+        loadLowStock();
+    }
+
+    async function loadStats() {
+        const res = await fetch(`${BASE_URL}/api/analytics/revenue`);
+        const data = await res.json();
+        document.getElementById("revenueText").innerText = `$${data.total_revenue.toFixed(2)}`;
+    }
+
+    async function loadInventory() {
+        const res = await fetch(`${BASE_URL}/api/inventory`);
+        const products = await res.json();
+        const tbody = document.getElementById("inventoryBody");
+        tbody.innerHTML = products.map(p => `
+            <tr>
+                <td>${p.name}</td>
+                <td>${p.category}</td>
+                <td>$${p.price.toFixed(2)}</td>
+                <td>${p.stock}</td>
+                <td><code>${p.barcode}</code></td>
+            </tr>`).join('');
+    }
+
+    // Apply the same ${BASE_URL} logic to uploadCSV and clearInventory functions
+</script>
+</body>
+</html>

@@ -1,0 +1,416 @@
+/* ================================
+   Base Reset
+================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #f4f6f8;
+    color: #1f2933;
+    line-height: 1.6;
+}
+
+/* ================================
+   Layout Containers
+================================= */
+.container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ================================
+   Navbar
+================================= */
+.navbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.navbar nav a {
+    margin-left: 20px;
+    text-decoration: none;
+    color: #4b5563;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.navbar nav a:hover {
+    color: #2563eb;
+}
+
+/* ================================
+   Hero Section (index.html)
+================================= */
+.hero {
+    background-color: #ffffff;
+    padding: 60px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.hero h2 {
+    font-size: 28px;
+    margin-bottom: 16px;
+}
+
+.hero p {
+    color: #6b7280;
+    font-size: 16px;
+}
+
+/* ================================
+   Cards
+================================= */
+.card {
+    background-color: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card h2 {
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* ================================
+   Tables
+================================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background-color: #f9fafb;
+}
+
+th, td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+th {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+td {
+    font-size: 14px;
+}
+
+tr:hover {
+    background-color: #f3f4f6;
+}
+
+/* ================================
+   Forms (POS)
+================================= */
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+input {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    margin-bottom: 18px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+button {
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: none;
+    background-color: #2563eb;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+button:hover {
+    background-color: #1e40af;
+}
+
+/* ================================
+   Status Messages
+================================= */
+#transactionStatus {
+    padding: 12px;
+    border-radius: 6px;
+    background-color: #f3f4f6;
+    font-size: 14px;
+}
+
+/* ================================
+   Footer
+================================= */
+.footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 40px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* ================================
+   Responsive
+================================= */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar nav {
+        margin-top: 10px;
+    }
+
+    .hero {
+        padding: 40px 20px;
+    }
+}
+/* ================================
+   Stock Status Badges
+================================= */
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-ok {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.badge-low {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-out {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+/* ================================
+   Loading Spinner
+================================= */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* ================================
+   Toast Notification
+================================= */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #111827;
+    color: #ffffff;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+/* ================================
+   Modern Card Hover & Shadow
+================================= */
+.card {
+    background-color: #ffffff;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* ================================
+   Buttons Upgrade
+================================= */
+button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #1e40af, #2563eb);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* ================================
+   Table Upgrade
+================================= */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+thead tr {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+td, th {
+    padding: 14px 16px;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f3f4f6;
+}
+
+tbody tr:hover {
+    background-color: #e0f2fe;
+}
+
+/* ================================
+   Hero Upgrade (Landing Page)
+================================= */
+.hero {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    padding: 80px 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.hero h2 {
+    font-size: 36px;
+    margin-bottom: 16px;
+}
+
+.hero p {
+    font-size: 18px;
+    color: #e0f2fe;
+}
+
+/* ================================
+   Toast Upgrade
+================================= */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #2563eb;
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+body {
+    background-color: #292626 !important;
+}
+#reader {
+    border: 2px dashed #2563eb;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+/* ==============================
+   Camera Scanner Box
+============================== */
+#reader {
+    width: 360px;           /* width of camera box */
+    height: 360px;          /* height of camera box */
+    margin: 30px auto;      /* center horizontally */
+    border: 3px dashed #2563eb;   /* dashed blue border */
+    border-radius: 12px;          /* rounded corners */
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15); /* subtle shadow */
+    position: relative;
+    background-color: #000;  /* optional dark background */
+}
+
+/* Optional: scanning overlay */
+#reader::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 4px solid rgba(255,255,255,0.2); /* subtle overlay */
+    pointer-events: none;  /* let clicks go through */
+    border-radius: 12px;
+}
