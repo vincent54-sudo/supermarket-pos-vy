@@ -24,6 +24,9 @@
         async function handleLogin() {
             const user = document.getElementById("username").value;
             const pass = document.getElementById("password").value;
+            const msgBox = document.getElementById("msg");
+
+            msgBox.innerText = "Connecting...";
 
             try {
                 const response = await fetch('/login', {
@@ -35,15 +38,15 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Save the "Security Token" so we can use it later
                     localStorage.setItem("token", data.access_token);
-                    alert("Login Successful!");
-                    window.location.href = "pos.html"; // Redirect to POS
+                    // SUCCESS: Send user to the main scanner page (Root /)
+                    window.location.href = "/"; 
                 } else {
-                    document.getElementById("msg").innerText = "Invalid credentials!";
+                    msgBox.innerText = data.detail || "Invalid credentials!";
                 }
             } catch (err) {
-                alert("Server is offline!");
+                msgBox.innerText = "Error: Could not reach server.";
+                console.error(err);
             }
         }
     </script>

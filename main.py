@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     # This runs when the server starts
     db = SessionLocal()
     try:
-        admin = db.query(User).filter(User.username == "admin").first()
+        admin = db.query(User).filter(User.username == "NETHUNTER").first()
         if not admin:
             db.add(User(username="NETHUNTER", password="Exothamic004."))
             db.commit()
