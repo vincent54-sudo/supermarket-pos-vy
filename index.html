@@ -21,6 +21,7 @@
             border: 2px solid #007bff;
             margin-bottom: 20px;
             border-radius: 8px;
+            overflow: hidden;
         }
         #interactive.viewport video, canvas {
             width: 100%;
@@ -28,12 +29,14 @@
             position: absolute;
             top: 0; left: 0;
         }
-        .container { display: flex; flex-direction: column; gap: 20px; padding: 20px; }
-        .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; }
+        .container { display: flex; flex-direction: column; gap: 20px; padding: 20px; max-width: 800px; margin: auto; }
+        .card { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; background: #f4f4f4; padding: 10px; }
         td { padding: 10px; border-bottom: 1px solid #ddd; }
         .total-container { padding: 20px; text-align: right; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { cursor: pointer; padding: 10px 15px; border-radius: 5px; border: none; background: #007bff; color: white; }
     </style>
 </head>
 <body>
@@ -58,7 +61,7 @@
                     <tr>
                         <th>Product</th>
                         <th>Price</th>
-                        <th>Quantity</th>
+                        <th>Qty</th>
                     </tr>
                 </thead>
                 <tbody id="cartTableBody"></tbody>
@@ -74,15 +77,12 @@
     </div>
 
     <div id="receipt-print-area" style="display:none;">
-        <div style="text-align:center; font-family: monospace;">
+        <div style="text-align:center; font-family: monospace; width: 300px; margin: auto;">
             <h1>MY BOOKSTORE</h1>
             <p>Customer Receipt</p>
             <p>Date: <span id="receiptDate"></span></p>
             <hr>
             <table style="width:100%; text-align: left;">
-                <thead>
-                    <tr><th>Item</th><th>Price</th></tr>
-                </thead>
                 <tbody id="receiptItems"></tbody>
             </table>
             <hr>
@@ -92,13 +92,12 @@
     </div>
 
     <script>
-        // --- VARIABLES ---
         let totalSum = 0;
         let isProcessing = false; 
         let lastCode = "";
-        let count = 0;
+        let detectionCount = 0;
 
-        // --- CAMERA INITIALIZATION ---
+        // --- CAMERA START ---
         Quagga.init({
             inputStream: {
                 name: "Live",
@@ -107,113 +106,93 @@
                 constraints: { facingMode: "environment" }
             },
             decoder: {
-                readers: ["ean_reader", "upc_reader", "code_128_reader"]
+                readers: ["ean_reader", "upc_reader", "code_128_reader", "ean_8_reader"]
             }
         }, function (err) {
-            if (err) { console.error("Camera error:", err); return; }
+            if (err) { alert("Camera failed: " + err); return; }
             Quagga.start();
         });
 
-        // --- CAMERA DETECTION LOGIC ---
+        // --- SCAN LOGIC ---
         Quagga.onDetected(async function (data) {
             const code = data.codeResult.code;
+            
             if (code === lastCode) {
-                count++;
+                detectionCount++;
             } else {
                 lastCode = code;
-                count = 0;
+                detectionCount = 0;
             }
 
-            if (count === 5 && !isProcessing) {
+            // Require 5 consistent reads to avoid "ghost" scans
+            if (detectionCount >= 5 && !isProcessing) {
                 isProcessing = true;
                 await fetchProductByBarcode(code);
+                
+                // Pause for 2 seconds so it doesn't scan the same item twice
                 setTimeout(() => { 
                     isProcessing = false; 
-                    count = 0; 
-                    lastCode = ""; 
-                }, 3000);
+                    detectionCount = 0;
+                    lastCode = "";
+                }, 2000);
             }
         });
 
-        // --- MANUAL ADD BUTTON ---
+        // --- MANUAL ADD ---
         document.getElementById("addBtn").addEventListener("click", async () => {
             const code = document.getElementById("itemId").value.trim();
-            if (code === "") {
-                alert("Please enter a code!");
-                return;
-            }
-            await fetchProductByBarcode(code);
+            if (code) await fetchProductByBarcode(code);
             document.getElementById("itemId").value = "";
         });
 
-        // --- DATA FETCHING ---
+        // --- THE API CALL (FIXED) ---
         async function fetchProductByBarcode(code) {
-            console.log("Searching for:", code);
             try {
-                const response = await fetch("/api/barcode/${code}");
+                // FIXED: Using backticks ` instead of quotes "
+                const response = await fetch(`/api/barcode/${code}`);
                 if (response.ok) {
                     const product = await response.json();
                     addItemToCart(product);
                 } else {
-                    alert("Barcode " + code + " not found in database!");
+                    console.log("Not found:", code);
                 }
             } catch (err) {
-                console.error("Connection error:", err);
+                console.error("Fetch error:", err);
             }
         }
 
-        // --- UI UPDATING ---
         function addItemToCart(product) {
             const tbody = document.getElementById("cartTableBody");
             const row = tbody.insertRow();
-            
             row.innerHTML = `
                 <td>${product.name}</td>
                 <td>$${product.price.toFixed(2)}</td>
                 <td>1</td>
             `;
-
-            updateGrandTotal(product.price);
-        }
-
-        function updateGrandTotal(price) {
-            totalSum += price;
+            totalSum += product.price;
             document.getElementById("grandTotal").innerText = `Total: $${totalSum.toFixed(2)}`;
         }
 
-        // --- CHECKOUT & PRINT RECEIPT ---
+        // --- PRINTING ---
         document.getElementById("checkoutBtn").addEventListener("click", () => {
             const cartRows = document.querySelectorAll("#cartTableBody tr");
-            if (cartRows.length === 0) {
-                alert("Cart is empty!");
-                return;
-            }
+            if (cartRows.length === 0) return alert("Cart is empty!");
 
             const receiptItems = document.getElementById("receiptItems");
-            receiptItems.innerHTML = ""; // Clear old receipt
+            receiptItems.innerHTML = "";
             
-            // Move items to receipt
             cartRows.forEach(row => {
-                const name = row.cells[0].innerText;
-                const price = row.cells[1].innerText;
-                const newRow = `<tr><td>${name}</td><td>${price}</td></tr>`;
-                receiptItems.innerHTML += newRow;
+                receiptItems.innerHTML += `<tr><td>${row.cells[0].innerText}</td><td>${row.cells[1].innerText}</td></tr>`;
             });
 
-            document.getElementById("receiptTotal").innerText = document.getElementById("grandTotal").innerText;
+            document.getElementById("receiptTotal").innerText = `Total: $${totalSum.toFixed(2)}`;
             document.getElementById("receiptDate").innerText = new Date().toLocaleString();
 
-            // Printing Logic
             const printContent = document.getElementById("receipt-print-area").innerHTML;
             const originalBody = document.body.innerHTML;
-
             document.body.innerHTML = printContent;
             window.print();
-            
-            // Return to normal and clear cart
             location.reload(); 
-
-            
         });
     </script>
 </body>
