@@ -35,18 +35,18 @@ Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()
-    try: yield db
-    finally: db.close()
+    try:
+        yield db
+    finally:
+        db.close()
 
 class UserSchema(BaseModel):
     username: str
     password: str
 
-# --- AUTO-CREATE USER ON STARTUP ---
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
-    # This creates your login automatically so you can get in!
     admin = db.query(User).filter(User.username == "NETHUNTER").first()
     if not admin:
         new_user = User(username="admin", password="Exothamic004.")
@@ -54,7 +54,6 @@ def startup_event():
         db.commit()
     db.close()
 
-# --- AUTH ---
 @app.post("/login")
 def login(user: UserSchema, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
@@ -62,7 +61,6 @@ def login(user: UserSchema, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     return {"message": "Login successful", "access_token": "fake-token-123"}
 
-# --- BARCODE SEARCH ---
 @app.get("/api/barcode/{barcode}")
 def search_barcode(barcode: str, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.barcode == barcode.strip()).first()
@@ -70,7 +68,6 @@ def search_barcode(barcode: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
-# --- CSV UPLOAD ---
 @app.post("/api/products/upload")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
     content = await file.read()
@@ -86,17 +83,18 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
     db.commit()
     return {"message": "Import Successful"}
 
-# --- SERVE HTML ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     if os.path.exists("index.html"):
-        with open("index.html", "r") as f: return f.read()
+        with open("index.html", "r") as f:
+            return f.read()
     return "<h1>index.html (Scanner) not found!</h1>"
 
 @app.get("/login", response_class=HTMLResponse)
 async def get_login_page():
     if os.path.exists("login.html"):
-        with open("login.html", "r") as f: return f.read()
+        with open("login.html", "r") as f:
+            return f.read()
     return "<h1>login.html not found!</h1>"
 
 app.mount("/", StaticFiles(directory="."), name="static")
