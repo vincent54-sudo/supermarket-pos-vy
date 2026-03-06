@@ -37,6 +37,17 @@ def get_db():
 class UserSchema(BaseModel):
     username: str; password: str
 
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    # Check if admin exists, if not, create it
+    admin = db.query(User).filter(User.username == "NETHUNTER").first()
+    if not admin:
+        new_user = User(username="admin", password="Exothamic004.") # Change these!
+        db.add(new_user)
+        db.commit()
+    db.close()
+
 # --- AUTH ROUTES ---
 @app.post("/login")
 def login(user: UserSchema, db: Session = Depends(get_db)):
