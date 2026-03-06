@@ -117,30 +117,47 @@
     async function refreshDashboard() {
         loadStats();
         loadInventory();
-        loadLowStock();
     }
 
     async function loadStats() {
-        const res = await fetch(`${BASE_URL}/api/analytics/revenue`);
-        const data = await res.json();
-        document.getElementById("revenueText").innerText = `$${data.total_revenue.toFixed(2)}`;
+        try {
+            const res = await fetch(`${BASE_URL}/api/analytics/revenue`);
+            const data = await res.json();
+            document.getElementById("revenueText").innerText = `$${data.total_revenue.toFixed(2)}`;
+        } catch (e) { console.log("Stats error"); }
     }
 
     async function loadInventory() {
-        const res = await fetch(`${BASE_URL}/api/inventory`);
-        const products = await res.json();
-        const tbody = document.getElementById("inventoryBody");
-        tbody.innerHTML = products.map(p => `
-            <tr>
-                <td>${p.name}</td>
-                <td>${p.category}</td>
-                <td>$${p.price.toFixed(2)}</td>
-                <td>${p.stock}</td>
-                <td><code>${p.barcode}</code></td>
-            </tr>`).join('');
+        try {
+            const res = await fetch(`${BASE_URL}/api/inventory`);
+            const products = await res.json();
+            const tbody = document.getElementById("inventoryBody");
+            tbody.innerHTML = products.map(p => `
+                <tr>
+                    <td>${p.name}</td>
+                    <td>${p.category}</td>
+                    <td>$${p.price.toFixed(2)}</td>
+                    <td>${p.stock}</td>
+                    <td><code>${p.barcode}</code></td>
+                </tr>`).join('');
+        } catch (e) { console.log("Inventory error"); }
     }
 
-    // Apply the same ${BASE_URL} logic to uploadCSV and clearInventory functions
+    async function uploadCSV() {
+        const fileInput = document.getElementById('csvFile');
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        await fetch(`${BASE_URL}/api/products/upload`, { method: "POST", body: formData });
+        alert("Sync Complete");
+        refreshDashboard();
+    }
+
+    async function clearInventory() {
+        if (confirm("Delete all?")) {
+            await fetch(`${BASE_URL}/api/products/clear`, { method: "DELETE" });
+            refreshDashboard();
+        }
+    }
 </script>
 </body>
 </html>

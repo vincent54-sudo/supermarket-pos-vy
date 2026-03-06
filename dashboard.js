@@ -1,10 +1,13 @@
-
 import { getInventory } from "./api.js";
 import { showToast } from "./utils.js";
 
-const Spinner = document.getElementById("loadingSpinner");
+// Use one name consistently (lowercase is best practice)
+const spinner = document.getElementById("loadingSpinner");
 const tableBody = document.querySelector("#inventoryTable tbody");
 
+/**
+ * Returns a styled HTML badge based on stock levels
+ */
 function getStockBadge(stock) {
     if (stock === 0) {
         return `<span class="badge badge-out">Out of Stock</span>`;
@@ -15,13 +18,20 @@ function getStockBadge(stock) {
     }
 }
 
+/**
+ * Fetches data from the API and updates the table
+ */
 async function loadInventory() {
-    spinner.style.display = "block";
+    // Show the spinner while loading
+    if (spinner) spinner.style.display = "block";
 
     try {
         const items = await getInventory();
+        
+        // Clear old table data
         tableBody.innerHTML = "";
 
+        // Build the new table rows
         items.forEach(item => {
             const row = `
                 <tr>
@@ -35,30 +45,13 @@ async function loadInventory() {
 
         showToast("Inventory loaded successfully");
     } catch (error) {
+        console.error("Load failed:", error);
         showToast("Failed to load inventory");
+    } finally {
+        // Hide the spinner whether it worked or failed
+        if (spinner) spinner.style.display = "none";
     }
-
-    spinner.style.display = "none";
 }
 
+// Start the loading process
 loadInventory();
-function getStockBadge(stock) {
-    if (stock === 0) {
-        return `<span class="badge badge-out">Out of Stock</span>`;
-    } else if (stock < 10) {
-        return `<span class="badge badge-low">Low Stock</span>`;
-    } else {
-        return `<span class="badge badge-ok">In Stock</span>`;
-    }
-}
-const spinner = document.getElementById("loadingSpinner");
-
-async function loadInventory() {
-    spinner.style.display = "block";
-
-    const items = await getInventory();
-
-    spinner.style.display = "none";
-    
-    // render table...
-}
