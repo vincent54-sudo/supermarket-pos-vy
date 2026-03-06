@@ -3,11 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from datetime import datetime
 from contextlib import asynccontextmanager
-import os, csv, io
+import os, csv, io, re
 
 # --- DATABASE SETUP ---
 DATABASE_URL = "sqlite:///./supermarket.db"
@@ -18,35 +17,52 @@ Base = declarative_base()
 class Product(Base):
     __tablename__ = "products"
     id = Column(String, primary_key=True)
-    name = Column(String); category = Column(String)
-    stock = Column(Integer); price = Column(Float); barcode = Column(String, unique=True, index=True)
+    name = Column(String)
+    category = Column(String)
+    stock = Column(Integer)
+    price = Column(Float)
+    barcode = Column(String, unique=True, index=True)
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True); password = Column(String)
+    username = Column(String, unique=True)
+    password = Column(String)
 
-# Create tables immediately
+# Create tables immediately on script load
 Base.metadata.create_all(bind=engine)
 
-# --- STARTUP LOGIC (New Modern Way) ---
+# --- STARTUP LOGIC ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This runs when the server starts
+    # This creates your specific credentials automatically on startup
     db = SessionLocal()
     try:
-        admin = db.query(User).filter(User.username == "NETHUNTER").first()
+        admin_user = "NETHUNTER"
+        admin_pass = "Exothamic004."
+        admin = db.query(User).filter(User.username == admin_user).first()
         if not admin:
-            db.add(User(username="NETHUNTER", password="Exothamic004."))
+            db.add(User(username=admin_user, password=admin_pass))
+            db.commit()
+        else:
+            # Ensure password is updated if you changed it in the code
+            admin.password = admin_pass
             db.commit()
     finally:
         db.close()
     yield
-    # Code here runs when the server shuts down
 
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# CORS middleware to allow your frontend to talk to the backend
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=["*"], 
+    allow_methods=["*"], 
+    allow_headers=["*"]
+)
+
+# Dependency to get database session
 def get_db():
     db = SessionLocal()
     try:
@@ -69,33 +85,74 @@ def login(user: UserSchema, db: Session = Depends(get_db)):
 
 @app.get("/api/barcode/{barcode}")
 def search_barcode(barcode: str, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.barcode == barcode.strip()).first()
+    # 1. Remove any non-numeric characters (spaces, newlines, etc.)
+    clean_code = re.sub(r'\D', '', barcode)
+    
+    # 2. Search for the exact code
+    product = db.query(Product).filter(Product.barcode == clean_code).first()
+    
+    # 3. If not found, try searching without leading zeros
     if not product:
-        raise HTTPException(status_code=404, detail="Not Found")
+        product = db.query(Product).filter(Product.barcode == clean_code.lstrip('0')).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail=f"Product {clean_code} not found")
     return product
 
 @app.post("/api/products/upload")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    content = await file.read()
-    stream = io.StringIO(content.decode('utf-8'))
-    reader = csv.DictReader(stream)
-    for row in reader:
-        barcode = row['barcode'].strip()
-        prod = db.query(Product).filter(Product.barcode == barcode).first()
-        if prod:
-            prod.name, prod.price = row['name'], float(row['price'])
-        else:
-            db.add(Product(id=row['id'], name=row['name'], category=row['category'], 
-                         stock=int(row['stock']), price=float(row['price']), barcode=barcode))
-    db.commit()
-    return {"message": "Success"}
+    try:
+        content = await file.read()
+        # 'utf-8-sig' handles Excel-specific hidden characters
+        stream = io.StringIO(content.decode('utf-8-sig'))
+        reader = csv.DictReader(stream)
+        
+        rows_added = 0
+        for row in reader:
+            # Standardize headers: lowercase and no spaces
+            row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+            
+            barcode_val = row.get('barcode')
+            if not barcode_val:
+                continue
+
+            # Upsert logic: Update if exists, create if new
+            prod = db.query(Product).filter(Product.barcode == barcode_val).first()
+            
+            # Clean numeric data
+            price_val = float(row.get('price', 0).replace('$', '').replace(',', ''))
+            stock_val = int(row.get('stock', 0))
+
+            if prod:
+                prod.name = row.get('name', prod.name)
+                prod.price = price_val
+                prod.stock = stock_val
+                prod.category = row.get('category', prod.category)
+            else:
+                db.add(Product(
+                    id=row.get('id', barcode_val),
+                    name=row.get('name', 'N/A'),
+                    category=row.get('category', 'General'),
+                    stock=stock_val,
+                    price=price_val,
+                    barcode=barcode_val
+                ))
+            rows_added += 1
+            
+        db.commit()
+        return {"message": f"Successfully processed {rows_added} products"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CSV Error: {str(e)}")
+
+# --- HTML SERVING ---
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    fname = "index.html" if os.path.exists("index.html") else "pos.html"
-    if os.path.exists(fname):
-        with open(fname, "r") as f: return f.read()
-    return "<h1>No HTML file found!</h1>"
+    # Priority order for loading your main app page
+    for page in ["index.html", "pos.html"]:
+        if os.path.exists(page):
+            with open(page, "r") as f: return f.read()
+    return "<h1>Scanner Page (index.html) not found!</h1>"
 
 @app.get("/login", response_class=HTMLResponse)
 async def get_login_page():
@@ -103,4 +160,5 @@ async def get_login_page():
         with open("login.html", "r") as f: return f.read()
     return "<h1>login.html not found!</h1>"
 
+# Mount static files last
 app.mount("/", StaticFiles(directory="."), name="static")
